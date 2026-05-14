@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-deployment
+  labels:
+    app: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+#Define the template for the pods that will be created by this deployment
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - name: webapp
+        image: nanajanashia/k8s-demo-app:v1.0
+        ports:
+        - containerPort: 3000
+        env:
+        - name: USER_NAME
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-user
+        - name: USER_PWD
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-password
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: mongo-config
+              key: mongo-url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+spec:
+  type: NodePort #This will expose the service on a port on each node in the cluster, allowing external access to the webapp. WHile ClusterIP (the default) would only allow internal access within the cluster, NodePort allows you to access the service from outside the cluster by using the IP address of any node and the assigned port. 
+  #This is useful for development and testing purposes, but for production environments, you might want to consider using a LoadBalancer or Ingress for better scalability and security.
+  selector:
+    app: webapp
+  ports:
+    - protocol: TCP
+      port: 3000 #Port on which the service will be exposed, that is the port of the service.  
+      targetPort: 3000  #Port on which the webapp container is listening, that is the port of the pods.
+      nodePort: 30001 #This is the port on which the service will be exposed on each node. You can choose any port in the range 30000-32767. In this case, we are exposing the webapp service on port 30001 on each node, allowing external access to the webapp through that port.
